@@ -186,6 +186,12 @@ func Collect(sessions []Session, id, provenance string, consented bool, end time
 		sort.SliceStable(cs, func(i, j int) bool { return newer(cs[i], cs[j]) })
 		selected = append(selected, cs)
 	}
+	applySampleLimits(&result, selected, truncation)
+	return result, nil
+}
+
+// applySampleLimits 仅复用消息配额和匿名编号，不把其它数据源伪装成学校 web 会话。
+func applySampleLimits(result *Sample, selected [][]candidate, truncation bool) {
 	var first, overflow []candidate
 	for _, cs := range selected {
 		n := min(15, len(cs))
@@ -226,7 +232,6 @@ func Collect(sessions []Session, id, provenance string, consented bool, end time
 	if truncation {
 		result.Warnings = append(result.Warnings, "部分消息按 2000 字符上限截断")
 	}
-	return result, nil
 }
 
 // newer 为相同时间添加稳定排序键，使相同输入能产生相同匿名编号和摘要。

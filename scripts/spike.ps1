@@ -1,10 +1,10 @@
 # 文件用途：在 Windows 上选择 Go 工具链并将缓存留在 D 盘，统一启动实验命令。
 param(
-    [ValidateSet('test','fixtures','collect','prepare','run','report','inspect')]
+    [ValidateSet('test','fixtures','collect','prepare','run','report','inspect','codex')]
     [string]$Action
 )
 $CommandArgs=$args
-if (-not $Action) { throw '请指定 test、fixtures、collect、prepare、run、report 或 inspect。' }
+if (-not $Action) { throw '请指定 test、fixtures、collect、prepare、run、report、inspect 或 codex。' }
 $ErrorActionPreference='Stop'
 $spikeGoCommand=Get-Command go -ErrorAction SilentlyContinue
 $spikeGo=if ($spikeGoCommand) { $spikeGoCommand.Source } else { 'D:\app\MemorySpike\sdk\go\bin\go.exe' }
