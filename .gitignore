@@ -1,0 +1,14 @@
+# 文件用途：阻止凭据、实验私有数据、生成结果和 Python 缓存进入 Git。
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+private/
+data/
+runs/
+results/
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
