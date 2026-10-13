@@ -25,7 +25,7 @@
 # 只生成方案允许的 U4/U5，不会伪造 U1/U2/U3/U6。
 .\scripts\spike.ps1 fixtures -out-dir D:\app\MemorySpike\private\samples -now 2026-10-13T12:00:00Z
 
-# 真实取样前：在当前进程设置 MEMORY_SPIKE_DSN（只读连接）、MEMORY_SPIKE_OWNER。
+# 真实取样前：在当前进程设置 MEMORY_SPIKE_SQL_DSN（只读连接）、MEMORY_SPIKE_OWNER。
 # owner 从获准账号核实；-sample 按真实用户分型选择；只有实际同意后才用 -consent。
 .\scripts\spike.ps1 collect -sample U1 -consent -out D:\app\MemorySpike\private\samples\U1.jsonl
 
