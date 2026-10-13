@@ -46,6 +46,11 @@ func LoadInputs(samplesPath, configPath, goldDir string) ([]Sample, Config, []An
 // Readiness 将所有缺失项一次列出，未齐全时禁止创建正式模型请求。
 func Readiness(samples []Sample, c Config, gold []Annotation) []string {
 	problems := ValidateConfig(c)
+	for _, a := range gold {
+		if a.Method != "" && a.Method != "independent_human" {
+			problems = append(problems, a.SampleID+": AI 辅助审阅不能代替正式实验的独立人工金标")
+		}
+	}
 	seen := map[string]bool{}
 	for _, s := range samples {
 		if seen[s.ID] {

@@ -8,6 +8,7 @@ import (
 
 var codexAutoTags = []string{"<environment_context", "<external_codex_apps_", "<in-app-browser-context", "<agent-message", "<subagent_notification", "<turn_aborted", "<permissions instructions", "<skills_instructions", "<system_reminder", "<user_instructions", "<context", "<image", "</image", "<audio", "<video"}
 var codexSecretPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?:密码|口令|密钥)\s*(?:是|为|[:：=])?\s*[A-Za-z0-9_!@#$%^&*.+/-]{3,}`),
 	regexp.MustCompile(`(?i)\b(?:sk-(?:proj-|ant-)?[a-z0-9_-]{12,}|gh[pousr]_[a-z0-9_]{20,}|github_pat_[a-z0-9_]{20,}|AKIA[A-Z0-9]{16})\b`),
 	regexp.MustCompile(`(?s)-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----.*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----`),
 	regexp.MustCompile(`\beyJ[a-zA-Z0-9_-]{8,}\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\b`),

@@ -32,7 +32,7 @@ func Handler(store *Store, host string) http.Handler {
 		switch {
 		case r.URL.Path == "/api/state" && r.Method == "GET":
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			_ = json.NewEncoder(w).Encode(map[string]any{"sample": store.Preview.Sample, "state": store.Snapshot(), "token": token})
+			_ = json.NewEncoder(w).Encode(map[string]any{"sample": store.Preview.Sample, "state": store.Snapshot(), "token": token, "suggestions": store.Suggestions})
 		case r.URL.Path == "/api/state" && r.Method == "POST":
 			if r.Header.Get("X-Annotation-Token") != token || r.Header.Get("Content-Type") != "application/json" {
 				http.Error(w, "页面验证失败，请刷新后重试", 403)

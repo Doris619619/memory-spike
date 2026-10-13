@@ -35,6 +35,7 @@ type Gold struct {
 }
 
 type Annotation struct {
+	Method     string `json:"method,omitempty"`
 	SampleID   string `json:"sample_id"`
 	SampleHash string `json:"sample_sha256"`
 	Annotator  string `json:"annotator"`

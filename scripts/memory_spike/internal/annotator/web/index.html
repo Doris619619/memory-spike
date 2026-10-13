@@ -15,6 +15,8 @@
 <h1 tabindex="-1" id="heading">先读这段你说过的话</h1>
 <blockquote id="message"></blockquote>
 <details id="context"><summary>查看同一聊天的前后原话</summary><div id="context-content"></div></details>
+<section id="ai-review" hidden><h2 id="ai-title">AI 已预标注，等你确认</h2><p id="ai-category"></p><p id="ai-reason"></p><ul id="review-facts"></ul><p id="ai-source" class="muted"></p><p class="muted">核对上面的事实、是否确为本人原话以及是否仍适用。有错可展开下方修改；确认后才计入已审阅。</p><button id="approve" class="primary">确认这条，下一条 →</button></section>
+<details id="editor" open><summary id="editor-summary" hidden>有不对的？修改分类或事实</summary>
 <section class="decision"><h2>这段话里，有需要区分的个人信息吗？</h2><p class="muted">普通提问、一次性指令，选“不用记住”即可。</p>
 <div id="choices" class="choices" role="group" aria-label="选择这段话的类别">
 <button data-choice="skip"><span class="choice-title"><b>1</b>不用记住</span><small>普通请求，或没有关于我的信息</small></button>
@@ -24,6 +26,7 @@
 <button data-choice="uncertain"><span class="choice-title"><b>5</b>拿不准，稍后看</span><small>先保留这道题，最后一起回顾</small></button>
 </div></section>
 <section id="facts-panel" hidden><h2>标出具体是哪句话</h2><p class="muted">在上面的原话中划选一句，再点“添加选中的原话”。一条只表达一个事实，也可以手动填写。</p><div class="inline-actions"><button id="add-selection" class="quiet">添加选中的原话</button><button id="add-empty" class="quiet">手动添加一条</button></div><div id="facts"></div></section>
+</details>
 <footer><button id="previous" class="quiet">← 上一条</button><div class="save-actions"><span id="save-status" role="status">尚未开始</span><button id="save" class="quiet">保存进度</button><button id="next" class="primary">保存，下一条 →</button></div></footer>
 <p class="bottom-note">可用数字 1–5 选择类别。离开前点“保存进度”；下一条也会保存。</p>
 </div></main></div>

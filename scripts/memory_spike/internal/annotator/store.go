@@ -14,8 +14,9 @@ import (
 )
 
 type Mark struct {
-	Status  string       `json:"status"`
-	Entries []spike.Gold `json:"entries"`
+	Reviewed bool         `json:"reviewed,omitempty"`
+	Status   string       `json:"status"`
+	Entries  []spike.Gold `json:"entries"`
 }
 type State struct {
 	Description string           `json:"description"`
@@ -26,10 +27,11 @@ type State struct {
 	Annotation  spike.Annotation `json:"annotation"`
 }
 type Store struct {
-	mu      sync.Mutex
-	Preview spike.CodexPreview
-	Path    string
-	state   State
+	Suggestions *Suggestions
+	mu          sync.Mutex
+	Preview     spike.CodexPreview
+	Path        string
+	state       State
 }
 
 // Open 检查冻结输入与磁盘进度；损坏或换样本时拒绝覆盖，不预填任何人工判断。
@@ -57,6 +59,9 @@ func Open(previewPath, statePath string) (*Store, error) {
 		ids[m.ID] = true
 	}
 	s.state = State{Description: "真人本地标注进度；annotation 是同一版本的金标，complete=false 时不可用于评估。", Marks: map[string]Mark{}, Annotation: spike.Annotation{SampleID: p.Sample.ID, SampleHash: p.SampleHash, Annotator: "participant-1", Entries: []spike.Gold{}}}
+	if err = s.loadSuggestions(filepath.Join(filepath.Dir(previewPath), "ai-suggestions.json")); err != nil {
+		return nil, err
+	}
 	b, err = os.ReadFile(statePath)
 	if os.IsNotExist(err) {
 		return s, nil
@@ -88,6 +93,9 @@ func (s *Store) Snapshot() State {
 
 // validate 允许未填完的草稿；完成提交必须逐题明确判断并填写有效事实及证据。
 func (s *Store) validate(next *State) error {
+	if s.Suggestions != nil || s.state.Annotation.Method == "ai_assisted" {
+		next.Annotation.Method = "ai_assisted"
+	}
 	if next.Current < 0 || next.Current >= len(s.Preview.Sample.Messages) {
 		return fmt.Errorf("题号无效")
 	}
@@ -106,6 +114,9 @@ func (s *Store) validate(next *State) error {
 	entries := []spike.Gold{}
 	for _, m := range s.Preview.Sample.Messages {
 		mark := next.Marks[m.ID]
+		if next.Annotation.Complete && s.Suggestions != nil && !mark.Reviewed {
+			return fmt.Errorf("还有未经本人确认的 AI 建议，请逐条确认")
+		}
 		if mark.Status != "" && mark.Status != "skip" && mark.Status != "uncertain" && mark.Status != "marked" {
 			return fmt.Errorf("题目状态无效")
 		}

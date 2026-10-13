@@ -135,6 +135,44 @@ func TestInputMismatch(t *testing.T) {
 	}
 }
 
+// TestAISuggestionsRequireReview 建议不得直接算完成人工标注；确认后保持 AI 辅助来源。
+func TestAISuggestionsRequireReview(t *testing.T) {
+	s, input := fixture(t)
+	complete := completeState(s)
+	suggestions := Suggestions{Author: "test-agent", SampleHash: s.Preview.SampleHash, Items: map[string]Suggestion{}}
+	for id, mark := range complete.Marks {
+		suggestions.Items[id] = Suggestion{Mark: mark, Reason: "虚构测试建议"}
+	}
+	if err := spike.WriteJSON(filepath.Join(filepath.Dir(input), "ai-suggestions.json"), suggestions); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Open(input, s.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Snapshot().Marks) != 0 {
+		t.Fatal("suggestions counted as human marks")
+	}
+	if _, err = s.Save(complete); err == nil {
+		t.Fatal("unreviewed suggestions completed")
+	}
+	for id, mark := range complete.Marks {
+		mark.Reviewed = true
+		complete.Marks[id] = mark
+	}
+	saved, err := s.Save(complete)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Annotation.Method != "ai_assisted" {
+		t.Fatal("AI provenance lost")
+	}
+	reopened, err := Open(input, s.Path)
+	if err != nil || reopened.Snapshot().Annotation.Method != "ai_assisted" {
+		t.Fatal("provenance not restored", err)
+	}
+}
+
 // TestHTTPBoundary 验证跨站、错误 Host、无令牌、未知路由被拒绝，合法保存可恢复。
 func TestHTTPBoundary(t *testing.T) {
 	s, _ := fixture(t)

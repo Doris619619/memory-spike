@@ -1,17 +1,17 @@
-// 文件用途：呈现冻结原话并收集真人判断；显式保存到本机服务，不生成或预填事实。
+// 文件用途：呈现冻结原话、可选 AI 建议与本人逐条审阅；明确区分建议和已确认结果。
 "use strict";
 /** 查找固定页面元素。 */
 const $ = (id) => document.getElementById(id);
-let sample, state, token, dirty = false, busy = false, selectedQuote = "";
+let sample, state, token, suggestions, dirty = false, busy = false, selectedQuote = "";
 const categories = {auto:"值得长期记住",temporary:"临时事项",sensitive:"敏感信息"};
 const stability = ["用户明确自述","多次出现的行为信号","单次弱信号"];
 
 /** 获取当前题目的草稿；未操作题不自动视为已审阅。 */
-function currentMark() { return state.marks[sample.messages[state.current].id] || {status:"", entries:[]}; }
+function currentMark() { const id=sample.messages[state.current].id; return state.marks[id] || (suggestions?.items[id] ? structuredClone(suggestions.items[id].mark) : {status:"", entries:[]}); }
 /** 仅已明确跳过或填齐事实的题目计入完成数量。 */
-function isDone(mark) { return mark?.status === "skip" || (mark?.status === "marked" && mark.entries.length > 0 && mark.entries.every(g => g.fact.trim() && g.stability)); }
+function isDone(mark) { return (!suggestions || mark?.reviewed) && (mark?.status === "skip" || (mark?.status === "marked" && mark.entries.length > 0 && mark.entries.every(g => g.fact.trim() && g.stability))); }
 /** 更新当前题草稿并撤销旧完成标志，保存前提示不离开。 */
-function changed(mark) { state.marks[sample.messages[state.current].id] = mark; state.annotation.complete = false; dirty = true; $("success").hidden = true; $("save-status").textContent = "有未保存的修改"; progress(); }
+function changed(mark) { if(suggestions) mark.reviewed=false; state.marks[sample.messages[state.current].id] = mark; state.annotation.complete = false; dirty = true; $("success").hidden = true; $("save-status").textContent = "有未保存的修改"; progress(); renderReview(); }
 /** 显示错误而不清除用户正在编辑的内容。 */
 function error(message) { $("error").textContent = message; $("error").hidden = !message; }
 /** 生成纯文本 DOM，防止聊天原文或输入被作为 HTML 执行。 */
@@ -58,6 +58,15 @@ function renderChoices() {
  const mark=currentMark();
  document.querySelectorAll("[data-choice]").forEach(button=>button.setAttribute("aria-pressed",String(mark.status===button.dataset.choice || (mark.status==="marked" && mark.entries.some(g=>g.category===button.dataset.choice)))));
 }
+/** 审阅模式先展示简洁的当前事实列表；详细编辑按需展开，不能把原始建议当已确认结果。 */
+function renderReview() {
+ if(!suggestions) return;
+ const mark=currentMark();$("review-facts").replaceChildren();
+ $("ai-title").textContent=mark.reviewed ? "本条已审阅" : "AI 已预标注，等你确认";
+ $("approve").textContent=mark.reviewed ? "已确认，继续下一条 →" : "确认这条，下一条 →";
+ if(mark.status==="marked") for(const g of mark.entries){const li=element("li");li.append(element("span",g.fact||"（待填写事实）"),element("small",`${categories[g.category]} · ${g.stability||"待选择依据"}`));$("review-facts").append(li);}
+ else $("review-facts").append(element("li",mark.status==="skip" ? "当前判断：不用记住。" : "当前判断：拿不准，需要你修改后确认。"));
+}
 /** 切换题目时展示全文和同会话上下文，不使用模型提示影响独立标注。 */
 function render() {
  selectedQuote="";
@@ -65,14 +74,18 @@ function render() {
  $("position").textContent=`第 ${state.current+1} / ${sample.messages.length} 条`;
  $("metadata").textContent=`${message.date.slice(0,10)} · 聊天 ${message.session.replace("s_","")}`;
  $("message").textContent=message.text;
+ const proposal=suggestions?.items[message.id]; $("ai-review").hidden=!proposal;
+ if(proposal) { $("ai-category").textContent=proposal.mark.status==="marked" ? `原始建议：${[...new Set(proposal.mark.entries.map(g=>categories[g.category]))].join("、")} · ${proposal.mark.entries.length} 条事实` : `原始建议：${proposal.mark.status==="skip" ? "不用记住" : "需你判断"}`; $("ai-reason").textContent=proposal.reason; $("ai-source").textContent=proposal.source_basis; $("approve").textContent=currentMark().reviewed ? "已确认，继续下一条 →" : "确认这条，下一条 →"; }
  $("previous").disabled=state.current===0;
  $("next").textContent=state.current===sample.messages.length-1 ? "保存并检查进度 →" : "保存，下一条 →";
+ if(suggestions) $("next").textContent="先跳过，稍后审阅 →";
  $("context").open=false; $("context-content").replaceChildren();
  const neighbors=sample.messages.filter(m=>m.session===message.session && m.id!==message.id);
  $("context").hidden=neighbors.length===0;
  neighbors.forEach(m=>$("context-content").append(element("p",`${m.date.slice(0,10)}\n${m.text}`)));
  $("success").hidden=!state.annotation.complete;
- renderChoices(); renderFacts(); progress();
+ $("editor").open=!suggestions;$("editor-summary").hidden=!suggestions;
+ renderChoices(); renderFacts(); progress(); renderReview();
 }
 /** 选择类别只创建空白输入；切换为跳过前避免误删已填写的事实。 */
 function choose(choice) {
@@ -121,11 +134,21 @@ async function goPending() {
  if(index<0) { error("每一条都已检查，可以点击左侧「完成并保存标注」。"); return; }
  await navigate(index);
 }
+/** 本人确认按钮才使 AI 建议计入审阅；普通保存和翻页不能替代确认。 */
+async function approve() {
+ const mark=currentMark();
+ if(mark.status==="uncertain" || (mark.status==="marked" && (!mark.entries.length || mark.entries.some(g=>!g.fact.trim()||!g.stability)))) {error("这条仍拿不准或事实没填完整，请先修改，再确认。");return;}
+ changed(mark);mark.reviewed=true;progress();
+ const next=sample.messages.findIndex((m,index)=>index>state.current&&!isDone(state.marks[m.id]));
+ if(await save(false,next<0 ? state.current : next)) {render();$("heading").focus({preventScroll:true});window.scrollTo({top:0,behavior:"instant"});}
+}
 /** 从本机加载并绑定操作；连接失败不显示伪造样本或可误点的空题。 */
 async function start() {
  try {
   const response=await fetch("/api/state"); if(!response.ok) throw new Error("无法读取本机样本");
-  ({sample,state,token}=await response.json()); render();
+  ({sample,state,token,suggestions}=await response.json()); render();
+  if(suggestions) { $("heading").textContent="核对原话，再确认我的建议"; $("finish").textContent="完成审阅并保存"; document.querySelector(".aside-note").textContent="这一批优先挑选长期记忆线索。AI 建议仍需你逐条确认；审阅结果只用于探索，不是独立人工金标。页面本身不会调用模型或上传聊天。"; }
+  $("approve").onclick=approve;
   $("save-status").textContent=state.saved_at ? "已恢复上次进度" : "尚未开始";
   document.querySelectorAll("[data-choice]").forEach(button=>button.onclick=()=>choose(button.dataset.choice));
   $("previous").onclick=()=>navigate(state.current-1);
