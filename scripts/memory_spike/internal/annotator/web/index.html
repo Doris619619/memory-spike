@@ -1,0 +1,30 @@
+<!-- 文件用途：提供一题一屏的本地人工标注工作台；所有资源均由本机服务提供。 -->
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>我的记忆 · 标注工作台</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header class="top"><a href="/" class="brand">我的记忆<span>标注工作台</span></a><span class="local"><span class="dot"></span>仅保存在本机</span></header>
+<div class="layout">
+<aside><p class="eyebrow">这次的进度</p><p class="counter"><strong id="done">0</strong><span id="total"> / — 条</span></p><progress id="progress" value="0" max="100" aria-label="标注进度"></progress><p id="remaining" class="muted">正在读取本机样本…</p><button id="pending" class="quiet">去未完成的题目 →</button>
+<details class="directory"><summary>题目目录</summary><div id="questions" class="questions"></div></details>
+<div class="aside-note"><p>按自己的真实想法选。</p><p>没有标准答案；不确定的可以先留着，最后再看。</p><p>这里不会调用 AI，也不会把聊天上传。</p></div>
+<button id="finish" class="finish">完成并保存标注</button></aside>
+<main id="workspace" aria-busy="true">
+<div id="error" role="alert" hidden></div><section id="success" hidden><h2>全部标记完成，已保存。</h2><p>回到 Codex 告诉我“标完了”就行。我会直接读取你保存的结果。</p><button id="edit" class="quiet">继续检查或修改</button></section>
+<div id="question-body">
+<div class="question-top"><span id="position" class="eyebrow">原话</span><span id="metadata" class="muted"></span></div>
+<h1 tabindex="-1" id="heading">先读这段你说过的话</h1>
+<blockquote id="message"></blockquote>
+<details id="context"><summary>查看同一聊天的前后原话</summary><div id="context-content"></div></details>
+<section class="decision"><h2>这段话里，有需要区分的个人信息吗？</h2><p class="muted">普通提问、一次性指令，选“不用记住”即可。</p>
+<div id="choices" class="choices" role="group" aria-label="选择这段话的类别">
+<button data-choice="skip"><span class="choice-title"><b>1</b>不用记住</span><small>普通请求，或没有关于我的信息</small></button>
+<button data-choice="auto"><span class="choice-title"><b>2</b>值得长期记住</span><small>稳定偏好、个人背景、持续事项</small></button>
+<button data-choice="temporary"><span class="choice-title"><b>3</b>临时事项</span><small>短期安排、暂时状态，过后会失效</small></button>
+<button data-choice="sensitive"><span class="choice-title"><b>4</b>敏感信息</span><small>隐私内容，不应自动存成记忆</small></button>
+<button data-choice="uncertain"><span class="choice-title"><b>5</b>拿不准，稍后看</span><small>先保留这道题，最后一起回顾</small></button>
+</div></section>
+<section id="facts-panel" hidden><h2>标出具体是哪句话</h2><p class="muted">在上面的原话中划选一句，再点“添加选中的原话”。一条只表达一个事实，也可以手动填写。</p><div class="inline-actions"><button id="add-selection" class="quiet">添加选中的原话</button><button id="add-empty" class="quiet">手动添加一条</button></div><div id="facts"></div></section>
+<footer><button id="previous" class="quiet">← 上一条</button><div class="save-actions"><span id="save-status" role="status">尚未开始</span><button id="save" class="quiet">保存进度</button><button id="next" class="primary">保存，下一条 →</button></div></footer>
+<p class="bottom-note">可用数字 1–5 选择类别。离开前点“保存进度”；下一条也会保存。</p>
+</div></main></div>
+</body></html>

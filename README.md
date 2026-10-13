@@ -6,6 +6,16 @@
 
 **当前已完成工具准备和一份 Codex 本地聊天预览，正式实验未执行。** U4/U5 合成样本已生成。新增 `codex` 命令，能从本人授权的本地记录准备待核对的 C1 样本；它不发送消息给模型，也不替代学校平台 U1/U2/U3/U6。正式实验仍缺真实样本、人工金标、模型实际价格和结构化输出能力验证。
 
+## 直接在页面里做标记
+
+新增本机[标注工作台](docs/本地标注页面.md)：一条原话一题，选择类别、划选具体事实，再点“保存，下一条”。可中途保存、恢复题号，全部完成后点“完成并保存标注”，无需手改 JSON。它只保存真人判断，不调用模型。
+
+```powershell
+.\scripts\spike.ps1 annotate -preview D:\app\MemorySpike\private\codex-preview-20261013-v2\preview.json -out D:\app\MemorySpike\private\codex-preview-20261013-v2\annotation-review.json
+```
+
+服务运行后打开 `http://127.0.0.1:8787`；重启服务仍可继续已保存的进度。标注结果位于同一私人目录的 `annotation-review.json`，其中 `annotation.complete=true` 才表示人工提交完成。仅标注仍不构成正式实验结果。
+
 ## 你现在只需提供自己的聊天
 
 可以先使用本人同意提供的 Codex 记录开展预实验，命令与限制见 [Codex 本地取样](docs/CODEX_LOCAL_PREVIEW.md)。本机已经生成待本人核对的 `D:\app\MemorySpike\private\codex-preview-20261013-v2\sample-review.md`，其中没有人工金标或模型评估结论。
