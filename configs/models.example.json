@@ -1,0 +1,36 @@
+{
+  "description": "按方案配置两个候选模型；实际价格和 V0 能力证据必须补齐，示例不代表已经验证。V2 为方案允许省略的可选参照。",
+  "base_url": "https://ai.cuhk.edu.cn/open/v1",
+  "prompt_version": "v0",
+  "max_output_tokens": 4096,
+  "timeout_seconds": 120,
+  "variants": ["V0", "V1"],
+  "models": [
+    {
+      "id": "glm-5.3-flash",
+      "provider": "CUHK open-platform / GLM local",
+      "api_type": "chat.completions",
+      "class": "local",
+      "structured_output": "unknown",
+      "capability_evidence": "",
+      "input_per_million": null,
+      "output_per_million": null,
+      "currency": "CNY",
+      "price_source": "",
+      "api_key_env": "MEMORY_SPIKE_API_KEY"
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "provider": "CUHK open-platform / OpenAI",
+      "api_type": "chat.completions",
+      "class": "commercial",
+      "structured_output": "unknown",
+      "capability_evidence": "",
+      "input_per_million": null,
+      "output_per_million": null,
+      "currency": "CNY",
+      "price_source": "",
+      "api_key_env": "MEMORY_SPIKE_API_KEY"
+    }
+  ]
+}
