@@ -5,11 +5,17 @@ const $ = (id) => document.getElementById(id);
 let sample, state, token, suggestions, dirty = false, busy = false, selectedQuote = "";
 const categories = {auto:"值得长期记住",temporary:"临时事项",sensitive:"敏感信息"};
 const stability = ["用户明确自述","多次出现的行为信号","单次弱信号"];
+const scopes = {global:"跨项目通用",project:"仅某个项目",conversation:"仅当前对话"};
+
+/** 缺少范围表示尚未标注；一旦选择项目，确认前必须填写名称。 */
+function factComplete(g) { return g.fact.trim() && g.stability && (g.scope!=="project" || g.project?.trim()); }
+/** 展示范围独立于保存类别；旧数据不得被默认为通用。 */
+function scopeSummary(g) { return g.scope==="project" ? `仅项目：${g.project?.trim()||"待填写名称"}` : scopes[g.scope]||"范围尚未标注"; }
 
 /** 获取当前题目的草稿；未操作题不自动视为已审阅。 */
 function currentMark() { const id=sample.messages[state.current].id; return state.marks[id] || (suggestions?.items[id] ? structuredClone(suggestions.items[id].mark) : {status:"", entries:[]}); }
 /** 仅已明确跳过或填齐事实的题目计入完成数量。 */
-function isDone(mark) { return (!suggestions || mark?.reviewed) && (mark?.status === "skip" || (mark?.status === "marked" && mark.entries.length > 0 && mark.entries.every(g => g.fact.trim() && g.stability))); }
+function isDone(mark) { return (!suggestions || mark?.reviewed) && (mark?.status === "skip" || (mark?.status === "marked" && mark.entries.length > 0 && mark.entries.every(factComplete))); }
 /** 更新当前题草稿并撤销旧完成标志，保存前提示不离开。 */
 function changed(mark) { if(suggestions) mark.reviewed=false; state.marks[sample.messages[state.current].id] = mark; state.annotation.complete = false; dirty = true; $("success").hidden = true; $("save-status").textContent = "有未保存的修改"; progress(); renderReview(); }
 /** 显示错误而不清除用户正在编辑的内容。 */
@@ -33,11 +39,25 @@ function progress() {
  });
 }
 /** 构建带占位提示的选择框，所有判断均由用户自己选择。 */
-function selectField(labelText, options, selected, onChange) {
+function selectField(labelText, options, selected, onChange, placeholder="请选择") {
  const label = element("label",labelText), select = element("select");
- const blank = element("option","请选择"); blank.value=""; select.append(blank);
+ const blank = element("option",placeholder); blank.value=""; select.append(blank);
  for (const [value,text] of Object.entries(options)) { const option=element("option",text); option.value=value; select.append(option); }
- select.value=selected; select.onchange=()=>onChange(select.value); label.append(select); return label;
+ select.value=selected||""; select.onchange=()=>onChange(select.value); label.append(select); return label;
+}
+/** 每条事实分别选范围；项目名称按需出现，清除项目范围时同时清除不再适用的名称。 */
+function scopeFields(g, mark, index) {
+ const row=element("div",undefined,"scope-fields");
+ const projectLabel=element("label","项目名称（项目范围必填）"), input=element("input");
+ input.id=`project-${index}`; input.type="text"; input.value=g.project||"";
+ input.placeholder="例如：课程资料整理"; input.autocomplete="off";
+ input.oninput=()=>{g.project=input.value;changed(mark);};
+ projectLabel.append(input); projectLabel.hidden=g.scope!=="project";
+ row.append(selectField("这条信息适用于哪里？",scopes,g.scope,value=>{
+  g.scope=value;if(value!=="project") {delete g.project;input.value="";}
+  projectLabel.hidden=value!=="project";changed(mark);
+ },"尚未标注范围（不代表通用）"),projectLabel);
+ return row;
 }
 /** 渲染多条事实的独立编辑区；一段话允许同时含稳定、临时与敏感信息。 */
 function renderFacts() {
@@ -50,7 +70,9 @@ function renderFacts() {
   fields.append(selectField("这条信息的类别",categories,g.category,value=>{ if(value) {g.category=value; changed(mark); renderChoices();} else {renderFacts();} }));
   fields.append(selectField("你根据什么判断？",Object.fromEntries(stability.map(x=>[x,x])),g.stability,value=>{ g.stability=value; changed(mark); }));
   const remove=element("button","删除这条","quiet remove"); remove.onclick=()=>{ mark.entries.splice(index,1); changed(mark); renderFacts(); };
-  fields.append(remove); section.append(label,text,fields); $("facts").append(section);
+  fields.append(remove); section.append(label,text,fields,scopeFields(g,mark,index));
+  section.append(element("p","范围和保存类别分开判断：项目约定也可以长期保留；仅当前对话不应带到其他聊天。","muted scope-help"));
+  $("facts").append(section);
  });
 }
 /** 将题目状态反映到按钮；包含多个类别时同时显示已选类别。 */
@@ -64,7 +86,7 @@ function renderReview() {
  const mark=currentMark();$("review-facts").replaceChildren();
  $("ai-title").textContent=mark.reviewed ? "本条已审阅" : "AI 已预标注，等你确认";
  $("approve").textContent=mark.reviewed ? "已确认，继续下一条 →" : "确认这条，下一条 →";
- if(mark.status==="marked") for(const g of mark.entries){const li=element("li");li.append(element("span",g.fact||"（待填写事实）"),element("small",`${categories[g.category]} · ${g.stability||"待选择依据"}`));$("review-facts").append(li);}
+ if(mark.status==="marked") for(const g of mark.entries){const li=element("li");li.append(element("span",g.fact||"（待填写事实）"),element("small",`${categories[g.category]} · ${scopeSummary(g)} · ${g.stability||"待选择依据"}`));$("review-facts").append(li);}
  else $("review-facts").append(element("li",mark.status==="skip" ? "当前判断：不用记住。" : "当前判断：拿不准，需要你修改后确认。"));
 }
 /** 切换题目时展示全文和同会话上下文，不使用模型提示影响独立标注。 */
@@ -106,7 +128,7 @@ function choose(choice) {
 async function save(complete=false, destination=state.current) {
  if(busy) return false;
  busy=true; error(""); const payload=structuredClone(state); payload.annotation.complete=complete; payload.current=destination;
- const controls=[...document.querySelectorAll("button,textarea,select")]; const disabled=controls.map(node=>node.disabled);
+ const controls=[...document.querySelectorAll("button,textarea,select,input")]; const disabled=controls.map(node=>node.disabled);
  controls.forEach(node=>node.disabled=true); $("workspace").setAttribute("aria-busy","true");
  try {
   const response=await fetch("/api/state",{method:"POST",headers:{"Content-Type":"application/json","X-Annotation-Token":token},body:JSON.stringify(payload)});
@@ -137,7 +159,7 @@ async function goPending() {
 /** 本人确认按钮才使 AI 建议计入审阅；普通保存和翻页不能替代确认。 */
 async function approve() {
  const mark=currentMark();
- if(mark.status==="uncertain" || (mark.status==="marked" && (!mark.entries.length || mark.entries.some(g=>!g.fact.trim()||!g.stability)))) {error("这条仍拿不准或事实没填完整，请先修改，再确认。");return;}
+ if(mark.status==="uncertain" || (mark.status==="marked" && (!mark.entries.length || !mark.entries.every(factComplete)))) {error("请补齐事实、判断依据；选择「仅某个项目」时还要填写项目名称，再确认。");$("editor").open=true;return;}
  changed(mark);mark.reviewed=true;progress();
  const next=sample.messages.findIndex((m,index)=>index>state.current&&!isDone(state.marks[m.id]));
  if(await save(false,next<0 ? state.current : next)) {render();$("heading").focus({preventScroll:true});window.scrollTo({top:0,behavior:"instant"});}

@@ -32,6 +32,8 @@ type Gold struct {
 	Category  string   `json:"category"`
 	Evidence  []string `json:"evidence"`
 	Stability string   `json:"stability"`
+	Scope     string   `json:"scope,omitempty"`
+	Project   string   `json:"project,omitempty"`
 }
 
 type Annotation struct {

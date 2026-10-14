@@ -130,6 +130,9 @@ func (s *Store) validate(next *State) error {
 			return fmt.Errorf("标记题目需要至少一条事实")
 		}
 		for _, g := range mark.Entries {
+			if err := validateScope(g, next.Annotation.Complete || mark.Reviewed); err != nil {
+				return err
+			}
 			if g.Category != "auto" && g.Category != "temporary" && g.Category != "sensitive" {
 				return fmt.Errorf("事实类别无效")
 			}
